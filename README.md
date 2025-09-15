@@ -1,4 +1,4 @@
-# Sanke game
+# Snake game
 
 ## Compile and run
 ```bash
