@@ -14,16 +14,16 @@ using namespace std::this_thread;
 
 char direction = 'r';
 int game_speed = 500; // default in ms (easy)
+int score = 0;        // NEW: score tracker
 
 // --- Input Handler ---
 void input_handler() {
-    // change terminal settings
     struct termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
-    // turn off canonical mode and echo
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
     map<char, char> keymap = {{'d', 'r'}, {'a', 'l'}, {'w', 'u'}, {'s', 'd'}, {'q', 'q'}};
     while (true) {
         char input = getchar();
@@ -68,7 +68,6 @@ pair<int, int> get_next_head(pair<int, int> current, char direction) {
 }
 
 // --- Game Play ---
-// --- Game Play ---
 void game_play() {
     system("clear");
     deque<pair<int, int>> snake;
@@ -85,27 +84,30 @@ void game_play() {
     pair<int, int> food = generate_food(snake);
 
     for (pair<int, int> head = make_pair(0, 1);; head = get_next_head(head, direction)) {
-        cout << "\033[H";
+        cout << "\033[H"; // move cursor to top
         if (find(snake.begin(), snake.end(), head) != snake.end()) {
             system("clear");
-            cout << "Game Over" << endl;
+            cout << "Game Over!" << endl;
+            cout << "Final Score: " << score << endl; // show final score
             exit(0);
         } else if (head == food) {
             food = generate_food(snake);
             snake.push_back(head);
 
-            if (game_speed > 80) {
-                game_speed -= 20; // each food makes it 20ms faster
-            }
+            score += 10; // 🎯 +10 per food eaten
 
+            if (game_speed > 80) {
+                game_speed -= 20; // speed up
+            }
         } else {
             snake.push_back(head);
             snake.pop_front();
         }
 
         render_game(10, snake, food);
-        cout << "length of snake: " << snake.size() << endl;
-        cout << "current speed: " << game_speed << "ms" << endl;
+        cout << "Score: " << score << endl;             // display score
+        cout << "Length: " << snake.size() << endl;     // display snake length
+        cout << "Speed: " << game_speed << "ms" << endl; // display current speed
         sleep_for(chrono::milliseconds(game_speed));
     }
 }
