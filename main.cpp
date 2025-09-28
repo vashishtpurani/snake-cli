@@ -1,6 +1,8 @@
 #include "snake.h"
 
 int main() {
+    srand(time(0)); // seed random generator
+
     select_difficulty();
 
     thread input_thread(input_handler);
