@@ -75,27 +75,32 @@ void game_play(){
     deque<pair<int, int>> snake;
     snake.push_back(make_pair(0,0));
 
-    pair<int, int> food = make_pair(rand() % 10, rand() % 10);
+    // ensure food doesn't spawn inside snake
+    auto generate_food = [&](deque<pair<int,int>> &snake) {
+        pair<int, int> f;
+        do {
+            f = make_pair(rand() % 10, rand() % 10);
+        } while (find(snake.begin(), snake.end(), f) != snake.end());
+        return f;
+    };
+
+    pair<int, int> food = generate_food(snake);
+
     for(pair<int, int> head=make_pair(0,1);; head = get_next_head(head, direction)){
-        // send the cursor to the top
         cout << "\033[H";
-        // check self collision
         if (find(snake.begin(), snake.end(), head) != snake.end()) {
             system("clear");
             cout << "Game Over" << endl;
             exit(0);
-        }else if (head.first == food.first && head.second == food.second) {
-            // grow snake
-            food = make_pair(rand() % 10, rand() % 10);
+        }else if (head == food) {
+            food = generate_food(snake);  // safe food generation
             snake.push_back(head);            
         }else{
-            // move snake
             snake.push_back(head);
             snake.pop_front();
         }
         render_game(10, snake, food);
         cout << "length of snake: " << snake.size() << endl;
-    
         sleep_for(500ms);
     }
 }
