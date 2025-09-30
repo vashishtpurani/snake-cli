@@ -8,12 +8,17 @@
 #include <map>
 #include <deque>
 #include <algorithm>
+#include <fstream>
+#include <string>
 using namespace std;
 using namespace std::this_thread;
 
 char direction = 'r';
 int game_speed = 500; // default in ms (easy)
 int score = 0;        // score tracker
+string difficulty = "Easy"; // track difficulty
+
+map<string, vector<int>> scores_db; // leaderboard storage
 
 // --- Input Handler ---
 void input_handler() {
@@ -77,6 +82,64 @@ pair<int, int> generate_item(deque<pair<int, int>> &snake, pair<int, int> other 
     return f;
 }
 
+// --- Leaderboard: Load & Save ---
+void load_scores() {
+    ifstream file("scores.txt");
+    if (!file.is_open()) return;
+
+    string line, current_diff;
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+        if (line[0] == '[') {
+            current_diff = line.substr(1, line.size() - 2); // strip [ ]
+            scores_db[current_diff] = {};
+        } else {
+            scores_db[current_diff].push_back(stoi(line));
+        }
+    }
+    file.close();
+}
+
+void save_scores() {
+    ofstream file("scores.txt", ios::trunc);
+    for (auto &entry : scores_db) {
+        file << "[" << entry.first << "]\n";
+        for (int s : entry.second) {
+            file << s << "\n";
+        }
+        file << "\n";
+    }
+    file.close();
+}
+
+void update_leaderboard() {
+    auto &scores = scores_db[difficulty];
+    scores.push_back(score);
+    sort(scores.begin(), scores.end(), greater<int>());
+    if (scores.size() > 10) scores.resize(10); // keep top 10
+    save_scores();
+}
+
+void show_leaderboard() {
+    cout << "\n🏆 Top 10 Scores (" << difficulty << "):\n";
+    auto &scores = scores_db[difficulty];
+    for (size_t i = 0; i < scores.size(); i++) {
+        cout << i + 1 << ". " << scores[i] << "\n";
+    }
+}
+
+// --- Game Over Handler ---
+void game_over(const string &reason) {
+    system("clear");
+    cout << reason << "\n";
+    cout << "Final Score: " << score << endl;
+
+    update_leaderboard();
+    show_leaderboard();
+
+    exit(0);
+}
+
 // --- Game Play ---
 void game_play() {
     system("clear");
@@ -89,10 +152,7 @@ void game_play() {
     for (pair<int, int> head = make_pair(0, 1);; head = get_next_head(head, direction)) {
         cout << "\033[H"; // move cursor to top
         if (find(snake.begin(), snake.end(), head) != snake.end()) {
-            system("clear");
-            cout << "Game Over! You hit yourself!\n";
-            cout << "Final Score: " << score << endl;
-            exit(0);
+            game_over("Game Over! You hit yourself!");
         } else if (head == food) {
             // Eat normal food
             snake.push_back(head);
@@ -105,10 +165,7 @@ void game_play() {
 
         } else if (head == poison) {
             // Eat poisonous food → game ends
-            system("clear");
-            cout << "☠️ Game Over! You ate poisonous food!\n";
-            cout << "Final Score: " << score << endl;
-            exit(0);
+            game_over("☠️ Game Over! You ate poisonous food!");
         } else {
             // Normal move
             snake.push_back(head);
@@ -134,9 +191,9 @@ void select_difficulty() {
     cin >> choice;
 
     switch (choice) {
-        case 1: game_speed = 500; break;
-        case 2: game_speed = 300; break;
-        case 3: game_speed = 150; break;
-        default: game_speed = 500; break;
+        case 1: game_speed = 500; difficulty = "Easy"; break;
+        case 2: game_speed = 300; difficulty = "Medium"; break;
+        case 3: game_speed = 150; difficulty = "Hard"; break;
+        default: game_speed = 500; difficulty = "Easy"; break;
     }
 }
